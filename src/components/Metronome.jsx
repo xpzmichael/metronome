@@ -9,36 +9,49 @@ function Metronome() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [mode, setMode] = useState('tick'); 
   const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); 
+  const [audioLoaded, setAudioLoaded] = useState(false);
 
   const intervalRef = useRef(null);
   const audioCtxRef = useRef(null);
   const currentBeatRef = useRef(0);
-  const vocalAudioRefs = useRef([
-    new Audio(oneAudio),
-    new Audio(twoAudio),
-    new Audio(threeAudio),
-    new Audio(fourAudio),
-  ]);
+  const vocalAudioRefs = useRef([]);
 
   useEffect(() => {
+    // Initialize AudioContext once
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
     }
+
+    // Preload audio files
+    const audioFiles = [oneAudio, twoAudio, threeAudio, fourAudio];
+    let loadedCount = 0;
+
+    vocalAudioRefs.current = audioFiles.map((src) => {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.oncanplaythrough = () => {
+        loadedCount++;
+        if (loadedCount === audioFiles.length) {
+          setAudioLoaded(true); // Mark audio as loaded when all are ready
+        }
+      };
+      return audio;
+    });
   }, []);
 
   useEffect(() => {
-    if (!isPlaying && mode === 'vocal') {
+    if (!isPlaying) {
       vocalAudioRefs.current.forEach(audio => {
         audio.pause();
         audio.currentTime = 0;
       });
     }
-  }, [isPlaying, mode]);
+  }, [isPlaying]);
 
   useEffect(() => {
     if (isPlaying) {
       currentBeatRef.current = 0;
-      const intervalTime = 60000 / bpm; // milliseconds per beat
+      const intervalTime = 60000 / bpm;
 
       intervalRef.current = setInterval(() => {
         if (mode === 'tick') {
@@ -51,6 +64,7 @@ function Metronome() {
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
+
     return () => clearInterval(intervalRef.current);
   }, [isPlaying, bpm, mode, beatsPerMeasure]);
 
@@ -69,6 +83,7 @@ function Metronome() {
   };
 
   const playVocal = (beatIndex) => {
+    if (!audioLoaded) return; // Prevent playing if audio isn't loaded
     const audio = vocalAudioRefs.current[beatIndex];
     audio.pause();
     audio.currentTime = 0;
@@ -115,9 +130,12 @@ function Metronome() {
       </div>
       <button
         onClick={() => setIsPlaying(!isPlaying)}
-        className={`mt-4 px-6 py-2 rounded-lg text-white font-semibold ${isPlaying ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+        disabled={!audioLoaded} // Prevent starting if audio isn't loaded
+        className={`mt-4 px-6 py-2 rounded-lg text-white font-semibold ${
+          isPlaying ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'
+        }`}
       >
-        {isPlaying ? "Stop" : "Start"}
+        {audioLoaded ? (isPlaying ? "Stop" : "Start") : "Loading..."}
       </button>
     </div>
   );
