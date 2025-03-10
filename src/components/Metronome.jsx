@@ -29,6 +29,9 @@ function Metronome() {
     vocalAudioRefs.current = audioFiles.map((src) => {
       const audio = new Audio(src);
       audio.preload = "auto";
+      audio.muted = true;  // Trick the browser into treating it as an interactive element
+      audio.play().catch(() => {});  // Prevent errors if autoplay is blocked
+      
       audio.oncanplaythrough = () => {
         loadedCount++;
         if (loadedCount === audioFiles.length) {
