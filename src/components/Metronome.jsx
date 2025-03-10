@@ -29,9 +29,6 @@ function Metronome() {
     vocalAudioRefs.current = audioFiles.map((src) => {
       const audio = new Audio(src);
       audio.preload = "auto";
-      audio.muted = true;  // Trick the browser into treating it as an interactive element
-      audio.play().catch(() => {});  // Prevent errors if autoplay is blocked
-      
       audio.oncanplaythrough = () => {
         loadedCount++;
         if (loadedCount === audioFiles.length) {
@@ -132,8 +129,13 @@ function Metronome() {
         </select>
       </div>
       <button
-        onClick={() => setIsPlaying(!isPlaying)}
-        disabled={!audioLoaded} // Prevent starting if audio isn't loaded
+        onClick={() => {
+          if (audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();  // Manually resume AudioContext
+          }
+          setAudioLoaded(true);  // Mark as loaded after tap
+          setIsPlaying(!isPlaying);
+        }}
         className={`mt-4 px-6 py-2 rounded-lg text-white font-semibold ${
           isPlaying ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'
         }`}
